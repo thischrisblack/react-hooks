@@ -3,12 +3,23 @@
 
 import * as React from 'react'
 
-function Greeting({initialName = ''}) {
-  const [name, setName] = React.useState(() => window.localStorage.getItem('name') || initialName);
+// Not thrilled about how we're trusting that 'key' will be passed in here. 
+// What if a dev uses this with just useLocalStorageState('Dolores')? 
+// Then localStorage would be like { Dolores: '' }
+function useLocalStorageState(key, initialName = '') {
+  const [state, setState] = React.useState(
+    () => window.localStorage.getItem(key) || initialName,
+  )
 
   React.useEffect(() => {
-    window.localStorage.setItem('name', name)
-  }, [name])
+    window.localStorage.setItem(key, state)
+  }, [key, state])
+
+  return [state, setState]
+}
+
+function Greeting({initialName = ''}) {
+  const [name, setName] = useLocalStorageState('name', initialName)
 
   function handleChange(event) {
     setName(event.target.value)
