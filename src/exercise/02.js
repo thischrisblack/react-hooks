@@ -1,19 +1,47 @@
 // useEffect: persistent state
-// http://localhost:3000/isolated/exercise/02.js
+// 💯 flexible localStorage hook
+// http://localhost:3000/isolated/final/02.extra-4.js
 
 import * as React from 'react'
 
-// Not thrilled about how we're trusting that 'key' will be passed in here. 
-// What if a dev uses this with just useLocalStorageState('Dolores')? 
-// Then localStorage would be like { Dolores: '' }
-function useLocalStorageState(key, initialName = '') {
-  const [state, setState] = React.useState(
-    () => window.localStorage.getItem(key) || initialName,
-  )
+/**
+ * 
+ * I was unclear on the instructions so I just copy pasted the final code
+ * below and then walked through it until I understood it. The use of useRef
+ * to hold persistent mutable data (prevKeyRef) was new to me. I had only
+ * ever used it for references to DOM elements.
+ */
 
+function useLocalStorageState(
+  key,
+  defaultValue = '',
+  {serialize = JSON.stringify, deserialize = JSON.parse} = {},
+) {
+  const [state, setState] = React.useState(() => {
+    const valueInLocalStorage = window.localStorage.getItem(key)
+    if (valueInLocalStorage) {
+      // the try/catch is here in case the localStorage value was set before
+      // we had the serialization in place (like we do in previous extra credits)
+      try {
+        return deserialize(valueInLocalStorage)
+      } catch (error) {
+        window.localStorage.removeItem(key)
+      }
+    }
+    return typeof defaultValue === 'function' ? defaultValue() : defaultValue
+  })
+
+  const prevKeyRef = React.useRef(key)
+
+  // Check the example at src/examples/local-state-key-change.js to visualize a key change
   React.useEffect(() => {
-    window.localStorage.setItem(key, state)
-  }, [key, state])
+    const prevKey = prevKeyRef.current
+    if (prevKey !== key) {
+      window.localStorage.removeItem(prevKey)
+    }
+    prevKeyRef.current = key
+    window.localStorage.setItem(key, serialize(state))
+  }, [key, state, serialize])
 
   return [state, setState]
 }
@@ -24,6 +52,7 @@ function Greeting({initialName = ''}) {
   function handleChange(event) {
     setName(event.target.value)
   }
+
   return (
     <div>
       <form>
